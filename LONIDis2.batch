@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+
+###############################################################################
+
+# SLURM JOB: Dispred (foreground run, iterate Para.txt)
+
+###############################################################################
+
+#SBATCH --job-name=Dispred
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=32
+#SBATCH --partition=gpu2
+#SBATCH --gres=gpu:1
+#SBATCH --time=2-00:00:00
+#SBATCH --account=loni_disorder01
+#SBATCH --output=logs/%x-%j.log
+#SBATCH --error=logs/%x-%j.log
+#SBATCH --open-mode=append
+
+#SBATCH --mail-user=zanwar1@uno.edu
+#SBATCH --mail-type=BEGIN,END,FAIL
+
+#SBATCH --output=logs/%x-%j.log
+#SBATCH --error=logs/%x-%j.log
+#SBATCH --open-mode=append
+
+set -euo pipefail
+mkdir -p logs
+source /home/zanwar/.venv/bin/activate
+
+
+python -u /work/zanwar/Research/LORADispred/LORADisPredTrain.py \
+  --run_name "esm2_auc1_tokenmix_$(date +%Y%m%d-%H%M%S)" \
+  --model_name esm2_t33_650M_UR50D \
+  --max_sequence_length_train 1022 \
+  --max_sequence_length_test 1022 \
+  --numberofepochs 8 \
+  --numberofbatch 2 \
+  --learning_rate 8e-5 \
+  --scheduler cosine \
+  --warmup_ratio 0.12 \
+  --weight_decay 0.05 \
+  --gradient_clip 1.0 \
+  --grad_accum_steps 4 \
+  --rank 16 \
+  --lora_alpha 32 \
+  --lora_dropout 0.10 \
+  --head crf \
+  --head_hidden_dim 512 \
+  --head_dropout 0.15 \
+  --loss ce \
+  --layer_pooling token_weighted \
+  --amp bf16 \
+  --data_backend local \
+  --train_sequences "/work/zanwar/Research/LORADispred/data/train_sequences.pkl" \
+  --train_labels    "/work/zanwar/Research/LORADispred/data/train_labels.pkl" \
+  --testNox_sequences "/work/zanwar/Research/LORADispred/data/Seq_CAID3NOX.pkl" \
+  --testNox_labels    "/work/zanwar/Research/LORADispred/data/target_CAID3NOX.pkl" \
+  --testPDB_sequences "/work/zanwar/Research/LORADispred/data/Seq_CAID3PDB.pkl" \
+  --testPDB_labels    "/work/zanwar/Research/LORADispred/data/target_CAID3PDB.pkl" \
+  --val_sequences "/work/zanwar/Research/LORADispred/data/testPDB_sequences.pkl" \
+  --val_labels    "/work/zanwar/Research/LORADispred/data/testPDB_labels.pkl" \
+  --output_dir "/work/zanwar/Research/LORADispred/outputs"
