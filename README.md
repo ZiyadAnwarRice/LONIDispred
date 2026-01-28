@@ -1,5 +1,5 @@
 ## Create environment
-1) module load python
+1) module load python (Ensure python version 3.11.5 using python --version)
 2) srun --job-name=Dispred --nodes=1 --ntasks=1 --cpus-per-task=32 --partition=gpu2 --gres=gpu:1 --time=01:00:00 --account=loni_disorder01 --pty /bin/bash
 3) python -m venv .venv
 4) source ~/.venv/bin/activate
