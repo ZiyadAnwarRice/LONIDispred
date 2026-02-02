@@ -21,20 +21,7 @@ uv python pin 3.11.5
 uv init
 
 # Configure torch cu121 index in pyproject.toml ----
-# Add/ensure this is in pyproject.toml:
-#
-# [project]
-# requires-python = ">=3.11.5,<3.12"
-#
-# [[tool.uv.index]]
-# name = "pytorch-cu121"
-# url = "https://download.pytorch.org/whl/cu121"
-# explicit = true
-#
-# [tool.uv.sources]
-# torch = { index = "pytorch-cu121" }
-# torchvision = { index = "pytorch-cu121" }
-# torchaudio = { index = "pytorch-cu121" }
+
 
 # Import requirements into the project
 uv add -r requirements.txt --frozen
