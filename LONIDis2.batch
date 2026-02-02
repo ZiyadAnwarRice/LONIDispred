@@ -1,41 +1,42 @@
 #!/usr/bin/env bash
 
-###############################################################################
-
-# SLURM JOB: Dispred (foreground run, iterate Para.txt)
-
-###############################################################################
-
 #SBATCH --job-name=Dispred
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --partition=gpu2
-#SBATCH --gres=gpu:1
-#SBATCH --time=2-00:00:00
+#SBATCH --gres=gpu:4
+#SBATCH --time=06:00:00
 #SBATCH --account=loni_disorder01
 #SBATCH --output=logs/%x-%j.log
 #SBATCH --error=logs/%x-%j.log
 #SBATCH --open-mode=append
-
-#SBATCH --mail-user=zanwar1@uno.edu
+#SBATCH --mail-user=mkabir3@uno.edu
 #SBATCH --mail-type=BEGIN,END,FAIL
 
-#SBATCH --output=logs/%x-%j.log
-#SBATCH --error=logs/%x-%j.log
-#SBATCH --open-mode=append
-
 set -euo pipefail
+
+cd /ddnB/work/$USER/LONIDispred
 mkdir -p logs
-source /home/zanwar/.venv/bin/activate
 
+echo "SLURM_JOB_ID=$SLURM_JOB_ID"
+echo "SLURM_GPUS=${SLURM_GPUS:-none}"
+echo "SLURM_GPUS_ON_NODE=${SLURM_GPUS_ON_NODE:-none}"
+echo "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
 
-python -u /work/zanwar/Research/LORADispred/LORADisPredTrain.py \
+nvidia-smi -L
+nvidia-smi
+
+source /ddnB/work/$USER/LONIDispred/.venv/bin/activate
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+
+torchrun --standalone --nproc_per_node=4 \
+  /ddnB/work/$USER/LONIDispred/LORADisPredTrain.py \
   --run_name "esm2_auc1_tokenmix_$(date +%Y%m%d-%H%M%S)" \
   --model_name esm2_t33_650M_UR50D \
   --max_sequence_length_train 1022 \
   --max_sequence_length_test 1022 \
-  --numberofepochs 8 \
+  --numberofepochs 3 \
   --numberofbatch 2 \
   --learning_rate 8e-5 \
   --scheduler cosine \
@@ -53,12 +54,12 @@ python -u /work/zanwar/Research/LORADispred/LORADisPredTrain.py \
   --layer_pooling token_weighted \
   --amp bf16 \
   --data_backend local \
-  --train_sequences "/work/zanwar/Research/LORADispred/data/train_sequences.pkl" \
-  --train_labels    "/work/zanwar/Research/LORADispred/data/train_labels.pkl" \
-  --testNox_sequences "/work/zanwar/Research/LORADispred/data/Seq_CAID3NOX.pkl" \
-  --testNox_labels    "/work/zanwar/Research/LORADispred/data/target_CAID3NOX.pkl" \
-  --testPDB_sequences "/work/zanwar/Research/LORADispred/data/Seq_CAID3PDB.pkl" \
-  --testPDB_labels    "/work/zanwar/Research/LORADispred/data/target_CAID3PDB.pkl" \
-  --val_sequences "/work/zanwar/Research/LORADispred/data/testPDB_sequences.pkl" \
-  --val_labels    "/work/zanwar/Research/LORADispred/data/testPDB_labels.pkl" \
-  --output_dir "/work/zanwar/Research/LORADispred/outputs"
+  --train_sequences "/work/$USER/LONIDispred/data/train_sequences.pkl" \
+  --train_labels    "/work/$USER/LONIDispred/data/train_labels.pkl" \
+  --testNox_sequences "/work/$USER/LONIDispred/data/Seq_CAID3NOX.pkl" \
+  --testNox_labels    "/work/$USER/LONIDispred/data/target_CAID3NOX.pkl" \
+  --testPDB_sequences "/work/$USER/LONIDispred/data/Seq_CAID3PDB.pkl" \
+  --testPDB_labels    "/work/$USER/LONIDispred/data/target_CAID3PDB.pkl" \
+  --val_sequences "/work/$USER/LONIDispred/data/testPDB_sequences.pkl" \
+  --val_labels    "/work/$USER/LONIDispred/data/testPDB_labels.pkl" \
+  --output_dir "/work/$USER/LONIDispred/outputs"

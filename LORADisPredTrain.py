@@ -70,11 +70,22 @@ import torch.nn.functional as F
 
 
 import os
+import getpass
 
-os.environ["HF_HOME"] = "/work/zanwar/huggingface"
-os.environ["TRANSFORMERS_CACHE"] = "/work/zanwar/huggingface/transformers"
-os.environ["HF_DATASETS_CACHE"] = "/work/zanwar/huggingface/datasets"
-os.environ["HUGGINGFACE_HUB_CACHE"] = "/work/zanwar/huggingface/hub"
+# Automatically gets the current cluster username (e.g., 'wasicse')
+user = getpass.getuser()
+
+# Define the base directory on the work volume
+base_work_dir = f"/work/{user}/huggingface"
+
+# Set environment variables
+os.environ["HF_HOME"] = base_work_dir
+os.environ["TRANSFORMERS_CACHE"] = os.path.join(base_work_dir, "transformers")
+os.environ["HF_DATASETS_CACHE"] = os.path.join(base_work_dir, "datasets")
+os.environ["HUGGINGFACE_HUB_CACHE"] = os.path.join(base_work_dir, "hub")
+
+# Optional: Create the directories if they don't exist to prevent errors
+os.makedirs(os.environ["HF_HOME"], exist_ok=True)
 
 
 
@@ -456,15 +467,34 @@ class ESMTokenClassifier(nn.Module):
 
         outputs = {"logits": emissions}
 
+        # if self.crf is not None:
+            # mask = attention_mask.bool() if attention_mask is not None else torch.ones_like(emissions[..., 0], dtype=torch.bool)
+            # if labels is not None:
+                # safe_labels = labels.clone()
+                # if (safe_labels == -100).any():
+                    # safe_labels = safe_labels.masked_fill(safe_labels == -100, 0)
+                    # mask = mask & (labels != -100)
+                # nll = -self.crf(emissions, safe_labels, mask=mask, reduction='mean')
+                # outputs["loss"] = nll
+                
         if self.crf is not None:
             mask = attention_mask.bool() if attention_mask is not None else torch.ones_like(emissions[..., 0], dtype=torch.bool)
+
             if labels is not None:
                 safe_labels = labels.clone()
-                if (safe_labels == -100).any():
-                    safe_labels = safe_labels.masked_fill(safe_labels == -100, 0)
-                    mask = mask & (labels != -100)
-                nll = -self.crf(emissions, safe_labels, mask=mask, reduction='mean')
-                outputs["loss"] = nll
+
+                ignore = (safe_labels == -100)
+                safe_labels = safe_labels.masked_fill(ignore, 0)
+
+                mask = mask & (~ignore)
+
+                # torchcrf requirement: first timestep must be on for all sequences
+                mask[:, 0] = True
+                safe_labels[:, 0] = 0
+
+                nll = -self.crf(emissions, safe_labels, mask=mask, reduction="mean")
+                outputs["loss"] = nll        
+                
         else:
             if labels is not None:
                 ce = nn.CrossEntropyLoss(ignore_index=-100)
@@ -882,6 +912,7 @@ def train_lora(*, args: argparse.Namespace, model_name: str, train_dataset: Data
         focal_alpha=args.focal_alpha,
     )
 
+
     trainer.train()
 
     # save model (adapters + head)
@@ -908,7 +939,7 @@ def train_lora(*, args: argparse.Namespace, model_name: str, train_dataset: Data
 def evaluate_model(model_path: str, testNOX_dataset: Dataset, testPDB_dataset: Dataset, tokenizer, run_dirs: Dict[str, str], temperature: Optional[float] = None, val_based_threshold: Optional[float] = None):
     model = ESMTokenClassifier.from_pretrained(model_path)
     data_collator = DataCollatorForTokenClassification(tokenizer=tokenizer)
-    trainer = Trainer(model=model, data_collator=data_collator, tokenizer=tokenizer)
+    trainer = Trainer(model=model, data_collator=data_collator)
 
     def _eval(dataset: Dataset, tag: str):
         pred_out = trainer.predict(test_dataset=dataset)
@@ -1167,7 +1198,10 @@ def main():
     # ---- Calibration on validation ----
     print("Calibrating on validation set…")
     model_cal = ESMTokenClassifier.from_pretrained(model_path)
-    ev_trainer = Trainer(model=model_cal, data_collator=DataCollatorForTokenClassification(tokenizer=tokenizer), tokenizer=tokenizer)
+    ev_trainer = Trainer(
+    model=model_cal,
+    data_collator=DataCollatorForTokenClassification(tokenizer=tokenizer),
+)
     val_pred = ev_trainer.predict(test_dataset=val_dataset)
     val_logits = val_pred.predictions
     val_labels = val_pred.label_ids
