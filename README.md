@@ -1,36 +1,31 @@
-# One-time: install uv (skip if uv already works)
+## One-time: install uv (skip if uv already works)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Ensure uv is on PATH
+## Ensure uv is on PATH
 export PATH="$HOME/.local/bin:$PATH"
 
-# Move uv cache to work (avoid /home quota)
+## Move uv cache to work (avoid /home quota)
 export UV_CACHE_DIR="/ddnB/work/$USER/.cache/uv"
 mkdir -p "$UV_CACHE_DIR"
 uv cache dir
 
-# Go to your project
+## Go to your project
 cd /ddnB/work/$USER/Research/LORADispred
 
-# Install and pin Python 3.11.5 (managed by uv)
+## Install and pin Python 3.11.5 (managed by uv)
 uv python install 3.11.5
 uv python pin 3.11.5
 
-# Initialize project files (only if pyproject.toml does NOT exist yet)
-# If pyproject.toml already exists, SKIP this line.
+## Initialize project files (only if pyproject.toml does NOT exist yet)
+## If pyproject.toml already exists, SKIP this line.
 uv init
 
-# Configure torch cu121 index in pyproject.toml ----
-
-
-# Import requirements into the project
-uv add -r requirements.txt --frozen
-
-# Lock + sync (creates/uses .venv)
+## Lock + sync (creates/uses .venv)
 uv lock
 uv sync
 
-# Sanity check
+## Sanity check
 which python
 python --version
 python -c "import torch; print(torch.__version__); print('cuda:', torch.version.cuda); print('available:', torch.cuda.is_available())"
+`
