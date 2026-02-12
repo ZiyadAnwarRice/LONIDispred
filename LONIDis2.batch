@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --partition=gpu2
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:2
 #SBATCH --time=06:00:00
 #SBATCH --account=loni_disorder01
 #SBATCH --output=logs/%x-%j.log
@@ -17,6 +17,16 @@
 set -euo pipefail
 
 cd /ddnB/work/$USER/LONIDispred
+
+
+# ---- Create venv + install deps if missing ----
+if [ ! -x "/ddnB/work/$USER/LONIDispred/.venv/bin/python" ]; then
+  echo "[bootstrap] .venv not found -> running install_dependencies.sh"
+  chmod +x /ddnB/work/$USER/LONIDispred/install_dependencies.sh
+  /ddnB/work/$USER/LONIDispred/install_dependencies.sh
+fi
+
+
 mkdir -p logs
 
 echo "SLURM_JOB_ID=$SLURM_JOB_ID"
@@ -28,9 +38,13 @@ nvidia-smi -L
 nvidia-smi
 
 source /ddnB/work/$USER/LONIDispred/.venv/bin/activate
+which python
+python -c "import torch; print(torch.__version__); print('cuda', torch.cuda.is_available())"
+
+
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
-torchrun --standalone --nproc_per_node=4 \
+python -m torch.distributed.run --standalone --nproc_per_node=2 \
   /ddnB/work/$USER/LONIDispred/LORADisPredTrain.py \
   --run_name "esm2_auc1_tokenmix_$(date +%Y%m%d-%H%M%S)" \
   --model_name esm2_t33_650M_UR50D \

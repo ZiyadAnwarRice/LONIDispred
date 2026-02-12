@@ -53,6 +53,21 @@ python train.py \
 """
 
 import os
+import torch
+ 
+def pin_gpu_to_local_rank():
+    if not torch.cuda.is_available():
+        return
+    local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+    torch.cuda.set_device(local_rank)
+    # optional: helps catch silent mismatches
+    print(f"[rank {os.environ.get('RANK','?')}] LOCAL_RANK={local_rank} "
+          f"current_device={torch.cuda.current_device()} "
+          f"name={torch.cuda.get_device_name(torch.cuda.current_device())}",
+          flush=True)
+ 
+
+
 import re
 import json
 import shutil
@@ -1101,6 +1116,7 @@ def parse_args() -> argparse.Namespace:
 
 def main():
     args = parse_args()
+    pin_gpu_to_local_rank()
 
     # Prepare run directories and shared W&B dir
     run_dirs = prepare_run_dirs(args.run_name, output_root=args.output_dir)
