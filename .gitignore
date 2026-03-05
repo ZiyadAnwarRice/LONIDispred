@@ -1,0 +1,11 @@
+# ignore all dotfiles / dotfolders anywhere
+.venv
+.git
+
+__pycache__
+
+outputs
+tmp_trainer
+data
+logs
+Delete

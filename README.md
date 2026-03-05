@@ -38,23 +38,39 @@ uv run python -c "import torch; print('torch:', torch.**version**); print('cuda:
 
 
 
+source .venv/bin/activate
+
 
 
 watchlastgpu () {
 
-&nbsp; jid=$(squeue -u "$USER" -h -o "%i" | head -n 1)
+  jid=$(squeue -u "$USER" -h -o "%i" | head -n 1)
 
-&nbsp; \[ -z "$jid" ] \&\& echo "No running jobs." \&\& return 1
+  \[ -z "$jid" ] \&\& echo "No running jobs." \&\& return 1
 
-&nbsp; node=$(squeue -j "$jid" -h -o "%N")
+  node=$(squeue -j "$jid" -h -o "%N")
 
-&nbsp; echo "Watching JOBID=$jid on NODE=$node ..."
+  echo "Watching JOBID=$jid on NODE=$node ..."
 
-&nbsp; srun --jobid "$jid" -w "$node" --pty bash -lc 'nvidia-smi dmon -s pucm'
+  srun --jobid "$jid" -w "$node" --pty bash -lc 'nvidia-smi dmon -s pucm'
 
 }
 
 watchlastgpu
 
 
+
+
+
+
+
+python convert\_msa\_dict\_to\_list.py \\
+
+  --ids\_pkl /work/$USER/LONIDispred/data/train\_ids.pkl \\
+
+  --msa\_dict\_pkl /work/$USER/LONIDispred/data/msa\_feat\_F23\_by\_id\_train.pkl \\
+
+  --out\_list\_pkl /work/$USER/LONIDispred/data/msa\_feat\_F23\_train\_LIST.pkl \\
+
+  --strict
 
